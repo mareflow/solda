@@ -151,7 +151,7 @@
             container.innerHTML = '';
             queueData.forEach(os => {
                 const card = document.createElement('div');
-                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${selectedOS?.id === os.id ? 'os-card-selected' : ''}`;
+                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${selectedOS?.os_id === os.os_id ? 'os-card-selected' : ''}`;
                 card.onclick = () => selectOS(os);
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
@@ -243,7 +243,7 @@
                 const services = Array.from(card.querySelectorAll('input:checked')).map(i => i.dataset.item);
 
                 const payload = {
-                    os_id: selectedOS.id,
+                    os_id: selectedOS.os_id, // Identificador correto da View para o n8n
                     component: pieceName,
                     target: target,
                     executed_services: services
