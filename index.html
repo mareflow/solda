@@ -128,12 +128,30 @@
         let selectedOS = null;
         let queueData = [];
 
-        // Checklists baseados no print de Solda
-        const CHECKLISTS = {
-            CCE: ["SOLDAGEM PÉ / MESA", "SOLDAGEM BORDA QUENTE CCE", "SOLDAGEM BORDA FRIA CCE", "SOLDAGEM BOCAL ADMISSÃO", "SOLDAGEM BOCAL FILTRO", "SOLDAGEM EMB. CCO", "SOLDAGEM MESA COLETOR"],
-            CCO: ["SOLDAGEM PALHETA ROTOR", "SOLDAGEM SAÍDA (FLANGE / BOTA)", "SOLDA WASTEGATE", "SOLDA MARÍTIMA - CICLO 1", "SOLDA MARÍTIMA - CICLO 2", "SOLDAGEM CABEÇOTE VALV. MARÍTIMA"],
-            CT: ["SOLDAGEM TRINCAS COLETOR", "SOLDAGEM ASPERSÃO TÉRMICA (EIXO)", "SOLDAGEM PALHETA EIXO", "SOLDAGEM PALHETA ROTOR", "SOLDAGEM SAÍDA (FLANGE / BOTA)", "SOLDA WASTEGATE", "SOLDA MARÍTIMA - CICLO 1"]
-        };
+        // Checklist Unificado e Completo para todos os componentes no setor de Solda
+        const WELDING_FULL_CHECKLIST = [
+            "SOLDAGEM EMB. CT",
+            "SOLDAGEM TRINCAS",
+            "SOLDAGEM ASSENT. CCE",
+            "SOLDAGEM ASSENT. WASTEGATE",
+            "SOLDAGEM SAÍDA CT",
+            "SOLDAGEM PÉ / MESA",
+            "SOLDAGEM BORDA QUENTE CCE",
+            "SOLDAGEM BORDA FRIA CCE",
+            "SOLDAGEM BOCAL ADMISSÃO",
+            "SOLDAGEM BOCAL FILTRO",
+            "SOLDAGEM EMB. CCO",
+            "SOLDAGEM MESA COLETOR",
+            "SOLDAGEM TRINCAS COLETOR",
+            "SOLDAGEM ASPERSÃO TÉRMICA (EIXO)",
+            "SOLDAGEM PALHETA EIXO",
+            "SOLDAGEM PALHETA ROTOR",
+            "SOLDAGEM SAÍDA (FLANGE / BOTA)",
+            "SOLDA WASTEGATE",
+            "SOLDA MARÍTIMA - CICLO 1",
+            "SOLDA MARÍTIMA - CICLO 2",
+            "SOLDAGEM CABEÇOTE VALV. MARÍTIMA"
+        ];
 
         window.onload = fetchQueue;
 
@@ -210,7 +228,7 @@ function renderComponentCards() {
                 card.className = `bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 ${cardStyle}`;
                 card.id = `card-comp-${name}`;
                 
-                const items = CHECKLISTS[name] || ["SERVIÇO DE SOLDA GERAL"];
+                const items = WELDING_FULL_CHECKLIST;
 
                 card.innerHTML = `
                     <div class="px-5 py-4 bg-slate-50 border-b flex justify-between items-center">
