@@ -141,17 +141,31 @@
             try {
                 const res = await fetch(API_QUEUE);
                 const data = await res.json();
-                queueData = Array.isArray(data) ? data : (data.data || []);
+                
+                // UNÍSSONO: Se vier um objeto único, transforma em Array. Se vier Array, mantém.
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                    queueData = [data];
+                } else {
+                    queueData = Array.isArray(data) ? data : [];
+                }
+                
                 renderQueue();
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error("Erro na fila:", e);
+                document.getElementById('os-queue-container').innerHTML = '<p class="text-red-500 text-xs p-4">Erro de conexão.</p>';
+            }
         }
 
-        function renderQueue() {
+function renderQueue() {
             const container = document.getElementById('os-queue-container');
             container.innerHTML = '';
+            
             queueData.forEach(os => {
                 const card = document.createElement('div');
-                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${selectedOS?.os_id === os.os_id ? 'os-card-selected' : ''}`;
+                // CORREÇÃO: Comparação usando os_id da View
+                const isSelected = selectedOS?.os_id === os.os_id ? 'os-card-selected' : '';
+                
+                card.className = `p-5 cursor-pointer transition border-l-4 border-transparent bg-white rounded-xl shadow-sm hover:shadow-md ${isSelected}`;
                 card.onclick = () => selectOS(os);
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
@@ -175,16 +189,25 @@
             renderComponentCards();
         }
 
-        function renderComponentCards() {
+function renderComponentCards() {
             const grid = document.getElementById('components-grid');
             grid.innerHTML = '';
             
-            // Lógica Unificada: Renderiza apenas o que o backend enviou para Solda
+            // Pega os componentes que o backend autorizou para este setor
             const componentsToShow = selectedOS.components_to_render || [];
 
             componentsToShow.forEach(name => {
+                // TAREFA: Verifica se esta peça já saiu da SOLDA para outro lugar (via histórico tracking)
+                const trackingData = (selectedOS.tracking || []).find(t => t.component === name);
+                const isRoteada = !!trackingData && trackingData.stage !== 'SOLDA';
+
+                // Aplica visual cinza se a peça já tiver sido despachada da Solda
+                const cardStyle = isRoteada ? 'opacity-40 grayscale pointer-events-none' : '';
+                const badgeText = isRoteada ? `EM ${trackingData.stage}` : 'Solda';
+                const badgeColor = isRoteada ? 'bg-slate-500' : 'bg-turbo-blue';
+
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all duration-300";
+                card.className = `bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 ${cardStyle}`;
                 card.id = `card-comp-${name}`;
                 
                 const items = CHECKLISTS[name] || ["SERVIÇO DE SOLDA GERAL"];
@@ -192,17 +215,16 @@
                 card.innerHTML = `
                     <div class="px-5 py-4 bg-slate-50 border-b flex justify-between items-center">
                         <h4 class="font-black text-slate-800 text-sm italic">${name}</h4>
-                        <span class="text-[8px] font-black uppercase px-2 py-0.5 bg-turbo-blue text-white rounded-full">Solda</span>
+                        <span class="text-[8px] font-black uppercase px-2 py-0.5 ${badgeColor} text-white rounded-full">${badgeText}</span>
                     </div>
                     <div class="p-5 flex-grow flex flex-col">
                         <div class="flex justify-between items-center mb-3">
                             <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Checklist de Execução:</p>
-                            <span class="text-[8px] font-bold text-turbo-red border border-turbo-red px-1.5 rounded uppercase">Entrar em Retrabalho</span>
                         </div>
                         <div class="checklist-scroll max-h-48 overflow-y-auto space-y-2.5 mb-6 pr-1">
                             ${items.map(item => `
                                 <label class="flex items-center space-x-3 cursor-pointer group">
-                                    <input type="checkbox" class="w-5 h-5 rounded border-slate-300 text-turbo-red focus:ring-turbo-red transition" data-item="${item}">
+                                    <input type="checkbox" ${isRoteada ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-red focus:ring-turbo-red transition" data-item="${item}">
                                     <span class="text-[10px] font-bold text-slate-600 group-hover:text-slate-900 transition uppercase">${item}</span>
                                 </label>
                             `).join('')}
