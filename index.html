@@ -90,9 +90,9 @@
                         <button onclick="openSpecialServiceModal()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
                             + Adicionar Serviço Especial
                         </button>
-                        <button class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
-                            Histórico OS
-                        </button>
+                       <button onclick="carregarLinhaDoTempo()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
+    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico OS
+</button>
                     </div>
                 </div>
 
@@ -131,10 +131,21 @@
                 <button onclick="closeSpecialServiceModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="p-8 space-y-6">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME DO ITEM / PROCESSO</label>
-                    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: RECUPERAÇÃO DE ROSCA, POLIMENTO ESPECIAL..." class="w-full bg-[#334155] text-white rounded-xl px-5 py-4 text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
-                </div>
+<div>
+    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME DO ITEM / PROCESSO</label>
+    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: SOLDAGEM ESPECIAL..." class="w-full bg-[#334155] text-white rounded-xl px-5 py-3 text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
+</div>
+
+<!-- Checklist Dinâmico -->
+<div>
+    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">CHECKLIST DE SOLDAGEM</label>
+    <div id="dynamic-checklist-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+        <div class="flex items-center space-x-2">
+            <input type="text" placeholder="Ex: Ciclo de Solda 1" class="special-checklist-input flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-blue-500">
+            <button onclick="addChecklistItemLine()" class="text-blue-600 hover:text-blue-800 p-2"><i class="fa-solid fa-circle-plus text-xl"></i></button>
+        </div>
+    </div>
+</div>
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1">TIPO DE PEÇA</label>
                     <div class="grid grid-cols-2 gap-4">
@@ -180,8 +191,14 @@
     </div>
 
     <!-- JS LOGIC -->
-    <script>
-        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/welding-queue';
+<!-- Biblioteca Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/welding-queue';
         const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
         
         let selectedOS = null;
@@ -291,7 +308,7 @@
                 const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : 'bg-turbo-teal');
 
                 // Busca checklist específico ou usa o padrão se for especial
-                const checklistItems = comp.isSpecial ? ["Serviço Geral Solda", "Recuperação", "Conferência"] : (COMPONENT_WELD_STRUCTURE[name] || ["SERVIÇO GERAL SOLDA"]);
+                const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL SOLDA"]) : (COMPONENT_WELD_STRUCTURE[name] || ["SERVIÇO GERAL SOLDA"]);
 
                 const itemHtml = checklistItems.map(item => `
                     <label class="flex items-center space-x-3 cursor-pointer group py-1.5">
@@ -384,10 +401,27 @@
 
         // --- LÓGICA DO MODAL DE SERVIÇO ESPECIAL (SOLDAGEM) ---
 
+        // --- LÓGICA DO MODAL DE SERVIÇO ESPECIAL (SOLDAGEM) ---
         function openSpecialServiceModal() { 
             document.getElementById('special-item-name').value = ''; 
+            document.getElementById('dynamic-checklist-container').innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <input type="text" placeholder="Ex: Ciclo de Solda 1" class="special-checklist-input flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-blue-500">
+                    <button onclick="addChecklistItemLine()" class="text-blue-600 hover:text-blue-800 p-2"><i class="fa-solid fa-circle-plus text-xl"></i></button>
+                </div>`;
             validateSpecialModal();
             document.getElementById('modal-special').classList.remove('hidden'); 
+        }
+
+        function addChecklistItemLine() {
+            const container = document.getElementById('dynamic-checklist-container');
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-2';
+            div.innerHTML = `
+                <input type="text" placeholder="Novo serviço..." class="special-checklist-input flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-blue-500">
+                <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 p-2"><i class="fa-solid fa-circle-minus text-xl"></i></button>
+            `;
+            container.appendChild(div);
         }
 
         function closeSpecialServiceModal() { 
@@ -411,36 +445,100 @@
         function toggleSpecialRadioStyle(type) {
             const lp = document.getElementById('label-padrao');
             const lr = document.getElementById('label-retrabalho');
-            const dotP = document.getElementById('radio-dot-padrao');
-            const dotR = document.getElementById('radio-dot-retrabalho');
-
             if(type === 'PADRAO') {
-                document.querySelector('input[value="PADRAO"]').checked = true;
                 lp.className = "flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all border-blue-600 bg-blue-50/50";
                 lr.className = "flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer transition-all hover:bg-slate-50";
-                dotP.classList.replace('bg-transparent', 'bg-blue-600');
-                dotR.classList.replace('bg-blue-600', 'bg-transparent');
             } else {
-                document.querySelector('input[value="RETRABALHO"]').checked = true;
                 lr.className = "flex items-center p-4 border-2 rounded-2xl cursor-pointer transition-all border-red-500 bg-red-50/50";
                 lp.className = "flex items-center p-4 border-2 border-slate-100 rounded-2xl cursor-pointer transition-all hover:bg-slate-50";
-                dotR.classList.replace('bg-transparent', 'bg-blue-600');
-                dotP.classList.replace('bg-blue-600', 'bg-transparent');
             }
         }
 
         function addSpecialCard() {
             const name = document.getElementById('special-item-name').value.toUpperCase();
-            const type = document.querySelector('input[name="special-type"]:checked').value;
-            
-            specialItemsList.push({
-                title: name,
-                type: type
-            });
+            const type = document.querySelector('input[name="special-type"]:checked')?.value || 'PADRAO';
+            const inputs = document.querySelectorAll('.special-checklist-input');
+            const customItems = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
+            if (customItems.length === 0) customItems.push("Serviço Geral Solda");
 
+            specialItemsList.push({ title: name, type: type, items: customItems, isSpecial: true });
             closeSpecialServiceModal();
             renderComponentCards();
         }
+
+        // --- LÓGICA DE HISTÓRICO ---
+        async function carregarLinhaDoTempo() {
+            if (!selectedOS) { alert("Selecione uma OS primeiro."); return; }
+            const os = selectedOS;
+            document.getElementById('detail-business-id').textContent = os.business_id;
+            document.getElementById('detail-model').textContent = os.model;
+            
+            const listExtras = document.getElementById('detail-maintenance-extras');
+            try {
+                let extras = os.maintenance_extras;
+                if (typeof extras === 'string' && extras.startsWith('{')) extras = JSON.parse(extras);
+                listExtras.innerHTML = formatMaintenanceExtras(extras);
+            } catch (e) { listExtras.innerHTML = '<li>Erro ao carregar itens.</li>'; }
+
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-slate-400 animate-pulse text-center py-4">Buscando rastreio...</p>';
+            document.getElementById('details-modal').classList.remove('hidden');
+            document.getElementById('details-modal').classList.add('flex');
+
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('history_events')
+                    .select('*')
+                    .eq('service_order_id', os.os_id || os.id)
+                    .order('timestamp', { ascending: true });
+
+                if (events && events.length > 0) {
+                    timeline.innerHTML = events.map(ev => `
+                        <div class="relative pb-4 border-l-2 border-turbo-blue pl-4 ml-2">
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 bg-turbo-blue rounded-full border-2 border-white shadow-sm"></div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
+                            <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                        </div>`).join('');
+                } else { 
+                    timeline.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center uppercase py-4">Iniciando rastreio...</p>'; 
+                }
+            } catch (err) { timeline.innerHTML = '<p class="text-xs text-red-500 text-center">Falha na conexão.</p>'; }
+        }
+
+        function formatMaintenanceExtras(extras) {
+            if (!extras || typeof extras !== 'object') return '<li class="text-slate-400">Nenhum item.</li>';
+            const mapping = { actuator: 'Atuador', geometry: 'Geometria', geometryStem: 'Canote', geometryFlange: 'Flange' };
+            const items = Object.entries(extras).filter(([_, val]) => val === true).map(([key, _]) => `<li class="font-bold text-slate-700">${mapping[key] || key}</li>`);
+            return items.length > 0 ? items.join('') : '<li class="text-slate-400">Nenhum item.</li>';
+        }
     </script>
+	
+	<!-- MODAL DE HISTÓRICO COMPLETO -->
+    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[150]">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-black text-turbo-blue uppercase tracking-tighter">Histórico da OS</h3>
+                <button onclick="document.getElementById('details-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800">--</p></div>
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <p class="text-slate-500 font-medium uppercase text-[10px] mb-1">Itens Adicionais (Checklist Entrada)</p>
+                    <ul id="detail-maintenance-extras" class="text-xs list-disc list-inside bg-slate-50 p-3 rounded-lg text-slate-800"></ul>
+                </div>
+            </div>
+
+            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
+            <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
+                <!-- Histórico injetado aqui -->
+            </div>
+        </div>
+    </div>
+	
 </body>
 </html>
