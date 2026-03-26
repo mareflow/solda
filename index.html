@@ -287,9 +287,15 @@
 
             const baseComponents = selectedOS.components_to_render || [];
             
+// Une componentes originais com os especiais adicionados manualmente
             const allComponents = [
                 ...baseComponents.map(name => ({ name, isSpecial: false })),
-                ...specialItemsList.map(item => ({ name: item.title, isSpecial: true, type: item.type }))
+                ...specialItemsList.map(item => ({ 
+                    name: item.title, 
+                    isSpecial: true, 
+                    type: item.type, 
+                    items: item.items // Esta linha é o que faltava para os itens aparecerem!
+                }))
             ];
 
             if (allComponents.length === 0) {
