@@ -281,65 +281,73 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function renderComponentCards() {
+function renderComponentCards() {
             const grid = document.getElementById('components-grid');
             if (!grid || !selectedOS) return;
 
-            const baseComponents = selectedOS.components_to_render || [];
+            const baseComponentsUnicos = [...new Set(selectedOS.components_to_render || [])];
             
-// Une componentes originais com os especiais adicionados manualmente
             const allComponents = [
-                ...baseComponents.map(name => ({ name, isSpecial: false })),
-                ...specialItemsList.map(item => ({ 
-                    name: item.title, 
-                    isSpecial: true, 
-                    type: item.type, 
-                    items: item.items // Esta linha é o que faltava para os itens aparecerem!
-                }))
+                ...baseComponentsUnicos.map(name => ({ name, isSpecial: false })),
+                ...specialItemsList.map(item => ({ name: item.title, isSpecial: true, type: item.type, items: item.items }))
             ];
-
-            if (allComponents.length === 0) {
-                grid.innerHTML = '<div class="col-span-full p-20 text-center"><p class="text-slate-400 font-black uppercase tracking-widest italic">Aguardando componentes serem liberados.</p></div>';
-                return;
-            }
 
             grid.innerHTML = allComponents.map(comp => {
                 const name = comp.name;
-                // Procura no tracking se a peça já saiu da SOLDA
-                const trk = (selectedOS.tracking || []).find(t => (t.component === name || t.component_name === name));
-                const isSent = !!trk && trk.current_stage !== 'SOLDA' && trk.stage !== 'SOLDA';
+                const trackingList = selectedOS.full_tracking || selectedOS.tracking || [];
+                const trk = trackingList.find(t => (t.component === name || t.component_name === name));
+                
+                const statusPeca = trk?.status || 'Aguardando';
+                const setorAtual = trk?.current_stage || trk?.stage || '';
+                
+                const isSent = !!trk && setorAtual !== 'SOLDA' && setorAtual !== '';
+                const isEmExecucao = statusPeca === 'Em Execução';
+                const isFinalizado = statusPeca === 'Finalizado';
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
-                const badgeText = isSent ? `EM ${(trk.current_stage || trk.stage).toUpperCase()}` : (comp.isSpecial ? comp.type : 'Solda');
-                const badgeColor = isSent ? 'bg-slate-500' : (comp.type === 'RETRABALHO' ? 'bg-red-600' : 'bg-turbo-teal');
+                
+                let badgeText = isFinalizado ? 'PRONTO' : (isEmExecucao ? 'EXECUTANDO' : 'AGUARDANDO');
+                if (isSent) badgeText = `EM ${setorAtual.toUpperCase()}`;
+                
+                let badgeColor = isFinalizado ? 'bg-emerald-500' : (isEmExecucao ? 'bg-orange-500 animate-pulse' : 'bg-turbo-teal');
+                if (isSent) badgeColor = 'bg-slate-500';
 
-                // Busca checklist específico ou usa o padrão se for especial
+                let tagInicio = '';
+                if (isEmExecucao && trk.rework_start_time) {
+                    const horaInic = new Date(trk.rework_start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    tagInicio = `<div class="bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-1 rounded mt-1 inline-block uppercase tracking-tighter">● EM ANDAMENTO (INICIADO ÀS ${horaInic})</div>`;
+                }
+
                 const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL SOLDA"]) : (COMPONENT_WELD_STRUCTURE[name] || ["SERVIÇO GERAL SOLDA"]);
-
-                const itemHtml = checklistItems.map(item => `
-                    <label class="flex items-center space-x-3 cursor-pointer group py-1.5">
-                        <input type="checkbox" ${isSent ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}">
-                        <span class="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition">${item}</span>
-                    </label>
-                `).join('');
+                const itemHtml = checklistItems.map(item => `<label class="flex items-center space-x-3 cursor-pointer group py-1.5"><input type="checkbox" ${(!isEmExecucao || isSent) ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}"><span class="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition">${item}</span></label>`).join('');
 
                 return `
                     <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-100 flex flex-col p-6 ${cardStyle}" id="comp-card-${name.replace(/\s+/g, '-')}">
                         <div class="flex justify-between items-center mb-6">
-                            <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">${name}</h4>
+                            <div class="flex flex-col">
+                                <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic leading-none">${name}</h4>
+                                ${tagInicio}
+                            </div>
                             <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest">${badgeText}</span>
                         </div>
-                        <div class="flex-1 flex flex-col">
+                        <div class="flex-1 flex flex-col relative">
+                            ${(statusPeca === 'Aguardando' && !isSent) ? `
+                                <div class="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
+                                    <i class="fa-solid fa-play text-turbo-teal text-4xl mb-4"></i>
+                                    <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Soldagem</button>
+                                </div>
+                            ` : ''}
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE SOLDAGEM:</p>
                             <div class="checklist-scroll overflow-y-auto max-h-[200px] space-y-1 mb-8 pr-1">${itemHtml}</div>
+                            ${isEmExecucao ? `<button onclick="finalizarServicoPeca('${name}')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-lg mb-6 transition-all transform hover:scale-105"><i class="fa-solid fa-check-double mr-2"></i> Finalizar Soldagem</button>` : ''}
                             <hr class="border-slate-100 mb-6">
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ENCAMINHAR PARA:</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button class="py-3 bg-turbo-teal text-white text-[10px] font-black uppercase rounded-lg cursor-default shadow-md">Solda</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Retífica</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Metrologia</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition">Bancada</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2">Pronto p/ Montagem</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Retífica</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
                             </div>
                         </div>
                     </div>`;
@@ -517,6 +525,50 @@
             const items = Object.entries(extras).filter(([_, val]) => val === true).map(([key, _]) => `<li class="font-bold text-slate-700">${mapping[key] || key}</li>`);
             return items.length > 0 ? items.join('') : '<li class="text-slate-400">Nenhum item.</li>';
         }
+		
+		async function iniciarServicoPeca(componentName) {
+            if (!selectedOS) return;
+            const osId = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+            try {
+                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ os_id: osId, component_name: componentName })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (!selectedOS.tracking) selectedOS.tracking = [];
+                    let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
+                    if (trk) { trk.status = 'Em Execução'; trk.rework_start_time = data.rework_start_time; }
+                    else { selectedOS.tracking.push({ component: componentName, component_name: componentName, status: 'Em Execução', rework_start_time: data.rework_start_time, current_stage: 'SOLDA' }); }
+                    renderComponentCards();
+                }
+            } catch (error) { alert("Erro ao iniciar serviço."); }
+        }
+
+        async function finalizarServicoPeca(componentName) {
+            if (!selectedOS) return;
+            const osId = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+            try {
+                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/finish-component-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ os_id: osId, component_name: componentName })
+                });
+                const resumo = await response.json();
+                if (response.ok) {
+                    let trk = (selectedOS.full_tracking || selectedOS.tracking || []).find(t => (t.component === componentName || t.component_name === componentName));
+                    if (trk) trk.status = 'Finalizado';
+                    document.getElementById('resumo-peca-nome').innerText = componentName;
+                    document.getElementById('resumo-inicio').innerText = resumo.start_time;
+                    document.getElementById('resumo-fim').innerText = resumo.end_time;
+                    document.getElementById('resumo-duracao').innerText = resumo.duration;
+                    document.getElementById('modal-resumo-tempo').classList.remove('hidden');
+                    document.getElementById('modal-resumo-tempo').classList.add('flex');
+                    renderComponentCards();
+                }
+            } catch (error) { alert("Erro ao finalizar."); }
+        }
     </script>
 	
 	<!-- MODAL DE HISTÓRICO COMPLETO -->
@@ -542,6 +594,35 @@
             <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
             <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
                 <!-- Histórico injetado aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESUMO DE EXECUÇÃO (SOLDA) -->
+    <div id="modal-resumo-tempo" class="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border-t-8 border-orange-500">
+            <div class="p-8 text-center">
+                <div class="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-stopwatch text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Soldagem Finalizada!</h3>
+                <p id="resumo-peca-nome" class="text-orange-600 font-bold uppercase text-sm mb-2">NOME DA PEÇA</p>
+                <p class="text-[11px] text-slate-500 font-medium italic mb-6">Agora você pode direcionar a peça para o próximo setor desejado.</p>
+                <div class="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl">
+                    <div class="text-left">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Início</p>
+                        <p id="resumo-inicio" class="font-bold text-slate-700">--:--</p>
+                    </div>
+                    <div class="text-left border-l pl-4">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Fim</p>
+                        <p id="resumo-fim" class="font-bold text-slate-700">--:--</p>
+                    </div>
+                    <div class="col-span-2 border-t pt-2 mt-2">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Tempo Total</p>
+                        <p id="resumo-duracao" class="text-2xl font-black text-orange-600">--</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('modal-resumo-tempo').classList.add('hidden')" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-black transition shadow-lg">OK, Continuar</button>
             </div>
         </div>
     </div>
