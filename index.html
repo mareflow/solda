@@ -314,8 +314,11 @@ function renderComponentCards() {
                 if (isSent) badgeColor = 'bg-slate-500';
 
                 let tagInicio = '';
-                if (isEmExecucao && trk.rework_start_time) {
-                    const horaInic = new Date(trk.rework_start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                // Busca a hora de início (tenta as duas propriedades possíveis)
+                const horaInicioRaw = trk?.rework_start_time || trk?.start_time;
+
+                if (isEmExecucao && horaInicioRaw) {
+                    const horaInic = new Date(horaInicioRaw).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     tagInicio = `<div class="bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-1 rounded mt-1 inline-block uppercase tracking-tighter">● EM ANDAMENTO (INICIADO ÀS ${horaInic})</div>`;
                 }
 
@@ -335,7 +338,7 @@ function renderComponentCards() {
                             ${(statusPeca === 'Aguardando' && !isSent) ? `
                                 <div class="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
                                     <i class="fa-solid fa-play text-turbo-teal text-4xl mb-4"></i>
-                                    <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Soldagem</button>
+                                    <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Serviço</button>
                                 </div>
                             ` : ''}
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE SOLDAGEM:</p>
@@ -529,9 +532,15 @@ function renderComponentCards() {
 		
 		async function iniciarServicoPeca(componentName) {
             if (!selectedOS) return;
-            const osId = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
+            // CORREÇÃO: Garante que pegamos o service_order_id da view
+            const idParaEnviar = selectedOS.service_order_id || selectedOS.os_id || selectedOS.id;
+
             try {
                 const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
+                });
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ os_id: osId, component_name: componentName })
