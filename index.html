@@ -248,8 +248,9 @@
 
             queueData.forEach(os => {
                 const card = document.createElement('div');
-                const osId = os.os_id || os.id;
-                card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${selectedOS?.os_id === osId ? 'os-card-selected' : ''}`;
+                // PRIORIZA O service_order_id QUE VEM DA VIEW
+                const osId = os.service_order_id || os.os_id || os.id;
+                card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${selectedOS?.service_order_id === osId ? 'os-card-selected' : ''}`;
                 card.onclick = () => selectOS(osId);
                 
                 card.innerHTML = `
