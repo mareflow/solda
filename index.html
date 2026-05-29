@@ -356,6 +356,10 @@ function renderComponentCards() {
                                     <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
                                 ` : ''}
 
+                                ${name === 'Eixo' ? `
+                                    <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
+                                ` : ''}
+
                                 <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
                             </div>
                         </div>
