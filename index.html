@@ -352,11 +352,7 @@ function renderComponentCards() {
                                 <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
                                 <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
                                 
-                                ${name === 'Eixo' ? `
-                                    <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
-                                ` : ''}
-
-                                ${name === 'Eixo' ? `
+                                ${name.toUpperCase() === 'EIXO' ? `
                                     <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
                                 ` : ''}
 
