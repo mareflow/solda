@@ -90,9 +90,9 @@
                         <button onclick="openSpecialServiceModal()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
                             + Adicionar Serviço Especial
                         </button>
-                       <button onclick="carregarLinhaDoTempo()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
-    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico OS
-</button>
+                        <button onclick="carregarLinhaDoTempo()" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition">
+                            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico OS
+                        </button>
                     </div>
                 </div>
 
@@ -123,7 +123,7 @@
         </main>
     </div>
 
-    <!-- MODAL SERVIÇO ESPECIAL (VERSÃO FIEL AO PRINT) -->
+    <!-- MODAL SERVIÇO ESPECIAL -->
     <div id="modal-special" class="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
@@ -131,21 +131,21 @@
                 <button onclick="closeSpecialServiceModal()" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <div class="p-8 space-y-6">
-<div>
-    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME DO ITEM / PROCESSO</label>
-    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: SOLDAGEM ESPECIAL..." class="w-full bg-[#334155] text-white rounded-xl px-5 py-3 text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
-</div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME DO ITEM / PROCESSO</label>
+                    <input type="text" id="special-item-name" oninput="validateSpecialModal()" placeholder="EX: SOLDAGEM ESPECIAL..." class="w-full bg-[#334155] text-white rounded-xl px-5 py-3 text-sm font-bold outline-none border-2 border-transparent focus:border-blue-500 transition-all">
+                </div>
 
-<!-- Checklist Dinâmico -->
-<div>
-    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">CHECKLIST DE SOLDAGEM</label>
-    <div id="dynamic-checklist-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
-        <div class="flex items-center space-x-2">
-            <input type="text" placeholder="Ex: Ciclo de Solda 1" class="special-checklist-input flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-blue-500">
-            <button onclick="addChecklistItemLine()" class="text-blue-600 hover:text-blue-800 p-2"><i class="fa-solid fa-circle-plus text-xl"></i></button>
-        </div>
-    </div>
-</div>
+                <!-- Checklist Dinâmico -->
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">CHECKLIST DE SOLDAGEM</label>
+                    <div id="dynamic-checklist-container" class="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        <div class="flex items-center space-x-2">
+                            <input type="text" placeholder="Ex: Ciclo de Solda 1" class="special-checklist-input flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-blue-500">
+                            <button onclick="addChecklistItemLine()" class="text-blue-600 hover:text-blue-800 p-2"><i class="fa-solid fa-circle-plus text-xl"></i></button>
+                        </div>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-3 ml-1">TIPO DE PEÇA</label>
                     <div class="grid grid-cols-2 gap-4">
@@ -191,14 +191,14 @@
     </div>
 
     <!-- JS LOGIC -->
-<!-- Biblioteca Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <!-- Biblioteca Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/welding-queue';
+        const API_QUEUE = 'https://webhook.mareflow.com.br/webhook/production/welding-queue';
         const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
         
         let selectedOS = null;
@@ -226,7 +226,6 @@
                 const response = await fetch(API_QUEUE);
                 const result = await response.json();
                 
-                // Trata o retorno conforme estrutura informada
                 if (Array.isArray(result)) {
                     queueData = result;
                 } else if (result && result.os_id) {
@@ -248,10 +247,13 @@
 
             queueData.forEach(os => {
                 const card = document.createElement('div');
-                // PRIORIZA O service_order_id QUE VEM DA VIEW
                 const osId = os.service_order_id || os.os_id || os.id;
-                card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${selectedOS?.service_order_id === osId ? 'os-card-selected' : ''}`;
-                card.onclick = () => selectOS(osId);
+                
+                // CORREÇÃO: Comparação de estado ativo simplificada e segura
+                const isSelected = selectedOS && (selectedOS.service_order_id === osId || selectedOS.os_id === osId || selectedOS.id === osId);
+                
+                card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${isSelected ? 'os-card-selected' : ''}`;
+                card.onclick = () => selectOS(os);
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-1">
@@ -265,8 +267,9 @@
             });
         }
 
-        function selectOS(osId) {
-            selectedOS = queueData.find(o => (o.os_id === osId || o.id === osId));
+        // CORREÇÃO: Passa o objeto completo 'os', evitando quebras de carregamento no find()
+        function selectOS(os) {
+            selectedOS = os;
             specialItemsList = []; 
             
             renderQueue();
@@ -275,14 +278,14 @@
             document.getElementById('workspace-header').classList.remove('hidden');
             document.getElementById('components-grid').classList.remove('hidden');
 
-            document.getElementById('current-os-id').innerText = selectedOS.business_id;
-            document.getElementById('current-os-desc').innerText = `${selectedOS.model} | ${selectedOS.client}`;
+            document.getElementById('current-os-id').innerText = selectedOS.business_id || '---';
+            document.getElementById('current-os-desc').innerText = `${selectedOS.model || '---'} | ${selectedOS.client || '---'}`;
 
             renderComponentCards();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-function renderComponentCards() {
+        function renderComponentCards() {
             const grid = document.getElementById('components-grid');
             if (!grid || !selectedOS) return;
 
@@ -314,7 +317,6 @@ function renderComponentCards() {
                 if (isSent) badgeColor = 'bg-slate-500';
 
                 let tagInicio = '';
-                // Busca a hora de início (tenta as duas propriedades possíveis)
                 const horaInicioRaw = trk?.rework_start_time || trk?.start_time;
 
                 if (isEmExecucao && horaInicioRaw) {
@@ -380,7 +382,7 @@ function renderComponentCards() {
                 btn.innerText = 'ENVIANDO...';
 
                 const payload = {
-                    os_id: selectedOS.os_id || selectedOS.id,
+                    os_id: selectedOS.service_order_id || selectedOS.os_id || selectedOS.id,
                     component: componentName,
                     target: targetSector,
                     executed_services: services
@@ -417,9 +419,6 @@ function renderComponentCards() {
             document.getElementById('modal-confirm-routing').classList.add('hidden');
         }
 
-        // --- LÓGICA DO MODAL DE SERVIÇO ESPECIAL (SOLDAGEM) ---
-
-        // --- LÓGICA DO MODAL DE SERVIÇO ESPECIAL (SOLDAGEM) ---
         function openSpecialServiceModal() { 
             document.getElementById('special-item-name').value = ''; 
             document.getElementById('dynamic-checklist-container').innerHTML = `
@@ -484,7 +483,6 @@ function renderComponentCards() {
             renderComponentCards();
         }
 
-        // --- LÓGICA DE HISTÓRICO ---
         async function carregarLinhaDoTempo() {
             if (!selectedOS) { alert("Selecione uma OS primeiro."); return; }
             const os = selectedOS;
@@ -530,9 +528,9 @@ function renderComponentCards() {
             return items.length > 0 ? items.join('') : '<li class="text-slate-400">Nenhum item.</li>';
         }
 		
-		async function iniciarServicoPeca(componentName) {
+        // CORREÇÃO: Removidos blocos de sintaxe corrompidos e duplicados
+        async function iniciarServicoPeca(componentName) {
             if (!selectedOS) return;
-            // CORREÇÃO: Garante que pegamos o service_order_id da view
             const idParaEnviar = selectedOS.service_order_id || selectedOS.os_id || selectedOS.id;
 
             try {
@@ -541,19 +539,29 @@ function renderComponentCards() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
                 });
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ os_id: osId, component_name: componentName })
-                });
+
                 if (response.ok) {
                     const data = await response.json();
                     if (!selectedOS.tracking) selectedOS.tracking = [];
                     let trk = selectedOS.tracking.find(t => (t.component === componentName || t.component_name === componentName));
-                    if (trk) { trk.status = 'Em Execução'; trk.rework_start_time = data.rework_start_time; }
-                    else { selectedOS.tracking.push({ component: componentName, component_name: componentName, status: 'Em Execução', rework_start_time: data.rework_start_time, current_stage: 'SOLDA' }); }
+                    if (trk) { 
+                        trk.status = 'Em Execução'; 
+                        trk.rework_start_time = data.rework_start_time; 
+                    } else { 
+                        selectedOS.tracking.push({ 
+                            component: componentName, 
+                            component_name: componentName, 
+                            status: 'Em Execução', 
+                            rework_start_time: data.rework_start_time, 
+                            current_stage: 'SOLDA' 
+                        }); 
+                    }
                     renderComponentCards();
                 }
-            } catch (error) { alert("Erro ao iniciar serviço."); }
+            } catch (error) { 
+                console.error("Erro ao iniciar serviço:", error);
+                alert("Erro ao iniciar serviço."); 
+            }
         }
 
         async function finalizarServicoPeca(componentName) {
@@ -608,7 +616,7 @@ function renderComponentCards() {
         </div>
     </div>
 
-    <!-- MODAL RESUMO DE EXECUÇÃO (SOLDA) -->
+    <!-- MODAL RESUMO DE EXECUÇÃO -->
     <div id="modal-resumo-tempo" class="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border-t-8 border-orange-500">
             <div class="p-8 text-center">
