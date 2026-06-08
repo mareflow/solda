@@ -105,7 +105,7 @@
                             <p class="text-xs font-black text-white uppercase">Produção Ativa</p>
                         </div>
                     </div>
-                    <button class="mt-3 w-full bg-turbo-teal hover:bg-teal-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition shadow-md shadow-teal-900">
+                    <button id="btn-sector-cleaning" onclick="toggleSectorCleaning('SOLDA')" class="mt-3 w-full bg-turbo-teal hover:bg-teal-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition shadow-md shadow-teal-900">
                         Iniciar Limpeza Setor
                     </button>
                 </div>
@@ -301,62 +301,79 @@ function renderComponentCards() {
                 const statusPeca = trk?.status || 'Aguardando';
                 const setorAtual = trk?.current_stage || trk?.stage || '';
                 
-                const isSent = !!trk && setorAtual !== 'SOLDA' && setorAtual !== '';
-                const isEmExecucao = statusPeca === 'Em Execução';
-                const isFinalizado = statusPeca === 'Finalizado';
+                const setoresPosteriores = ['METROLOGIA', 'BANCADA', 'MONTAGEM', 'BALANCEAMENTO', 'BANCADA DE USINAGEM'];
+                const isSent = !!trk && setoresPosteriores.includes(setorAtual.toUpperCase().trim());
                 
                 const cardStyle = isSent ? 'opacity-40 grayscale pointer-events-none' : '';
                 
-                let badgeText = isFinalizado ? 'PRONTO' : (isEmExecucao ? 'EXECUTANDO' : 'AGUARDANDO');
-                if (isSent) badgeText = `EM ${setorAtual.toUpperCase()}`;
-                
-                let badgeColor = isFinalizado ? 'bg-emerald-500' : (isEmExecucao ? 'bg-orange-500 animate-pulse' : 'bg-turbo-teal');
-                if (isSent) badgeColor = 'bg-slate-500';
-
-                let tagInicio = '';
-                // Busca a hora de início (tenta as duas propriedades possíveis)
-                const horaInicioRaw = trk?.rework_start_time || trk?.start_time;
-
-                if (isEmExecucao && horaInicioRaw) {
-                    const horaInic = new Date(horaInicioRaw).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    tagInicio = `<div class="bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-1 rounded mt-1 inline-block uppercase tracking-tighter">● EM ANDAMENTO (INICIADO ÀS ${horaInic})</div>`;
+                let badgeText = 'Solda';
+                let badgeColor = 'bg-turbo-teal';
+                if (isSent) {
+                    badgeText = `EM ${setorAtual.toUpperCase()}`;
+                    badgeColor = 'bg-slate-500';
                 }
 
                 const checklistItems = comp.isSpecial ? (comp.items || ["SERVIÇO GERAL SOLDA"]) : (COMPONENT_WELD_STRUCTURE[name] || ["SERVIÇO GERAL SOLDA"]);
-                const itemHtml = checklistItems.map(item => `<label class="flex items-center space-x-3 cursor-pointer group py-1.5"><input type="checkbox" ${(!isEmExecucao || isSent) ? 'disabled' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal" data-item="${item}"><span class="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition">${item}</span></label>`).join('');
+                const trackingData = trk && trk.tracking_data ? (typeof trk.tracking_data === 'string' ? JSON.parse(trk.tracking_data) : trk.tracking_data) : [];
+
+                const itemHtml = checklistItems.map(item => {
+                    const cleanItemName = item.replace(/\s+/g, '_').toLowerCase();
+                    const savedLog = Array.isArray(trackingData) ? trackingData.find(log => log.service === item) : null;
+                    
+                    const timerKey = `timer_${selectedOS.id}_${name}_${item}`;
+                    const isActive = localStorage.getItem(timerKey) !== null;
+
+                    let timeBadgeHtml = "";
+                    let actionBtnHtml = "";
+
+                    if (savedLog) {
+                        const min = Math.floor(savedLog.duration_seconds / 60);
+                        const sec = savedLog.duration_seconds % 60;
+                        timeBadgeHtml = `<span class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-black uppercase border border-emerald-100"><i class="fa-solid fa-clock mr-1"></i> ${min}:${sec.toString().padStart(2, '0')} min</span>`;
+                    } else if (isActive) {
+                        timeBadgeHtml = `<span id="badge-${name}-${cleanItemName}" class="text-[10px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-black animate-pulse border border-orange-100">00:00</span>`;
+                        actionBtnHtml = `<button type="button" onclick="stopServiceTimer('${name}', '${item}')" class="text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg transition-all uppercase text-[9px] tracking-wider">Parar</button>`;
+                    } else {
+                        actionBtnHtml = `<button type="button" onclick="startServiceTimer('${name}', '${item}')" class="text-xs bg-turbo-teal hover:bg-teal-700 text-white font-bold py-1 px-3 rounded-lg transition-all uppercase text-[9px] tracking-wider"><i class="fa-solid fa-play mr-1"></i> Iniciar</button>`;
+                    }
+
+                    return `
+                        <div class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 px-2 rounded-lg transition">
+                            <div class="flex items-center space-x-3">
+                                <label class="flex items-center space-x-3 cursor-pointer group">
+                                    <input type="checkbox" ${isSent ? 'disabled' : ''} ${savedLog ? 'checked' : ''} class="w-5 h-5 rounded border-slate-300 text-turbo-teal focus:ring-turbo-teal transition-all" data-service="${item}">
+                                    <span class="text-xs font-bold text-slate-600 group-hover:text-slate-800 transition">${item}</span>
+                                </label>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                ${timeBadgeHtml}
+                                ${!isSent ? actionBtnHtml : ''}
+                            </div>
+                        </div>`;
+                }).join('');
 
                 return `
                     <div class="bg-white rounded-3xl shadow-sm border-2 border-slate-100 flex flex-col p-6 ${cardStyle}" id="comp-card-${name.replace(/\s+/g, '-')}">
                         <div class="flex justify-between items-center mb-6">
-                            <div class="flex flex-col">
-                                <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic leading-none">${name}</h4>
-                                ${tagInicio}
-                            </div>
+                            <h4 class="text-2xl font-black text-slate-800 tracking-tighter uppercase italic">${name}</h4>
                             <span class="text-[10px] font-black uppercase px-4 py-1.5 ${badgeColor} text-white rounded-full tracking-widest">${badgeText}</span>
                         </div>
                         <div class="flex-1 flex flex-col relative">
-                            ${(statusPeca === 'Aguardando' && !isSent) ? `
-                                <div class="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center text-center p-4">
-                                    <i class="fa-solid fa-play text-turbo-teal text-4xl mb-4"></i>
-                                    <button onclick="iniciarServicoPeca('${name}')" class="bg-turbo-teal text-white font-black px-6 py-3 rounded-xl uppercase text-xs tracking-widest shadow-xl hover:scale-105 transition">Iniciar Serviço</button>
-                                </div>
-                            ` : ''}
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CHECKLIST DE SOLDAGEM:</p>
                             <div class="checklist-scroll overflow-y-auto max-h-[200px] space-y-1 mb-8 pr-1">${itemHtml}</div>
-                            ${isEmExecucao ? `<button onclick="finalizarServicoPeca('${name}')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest shadow-lg mb-6 transition-all transform hover:scale-105"><i class="fa-solid fa-check-double mr-2"></i> Finalizar Soldagem</button>` : ''}
                             <hr class="border-slate-100 mb-6">
                             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">ENCAMINHAR PARA:</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button class="py-3 bg-turbo-teal text-white text-[10px] font-black uppercase rounded-lg cursor-default shadow-md">Solda</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Retífica</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Metrologia</button>
-                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" ${!isFinalizado ? 'disabled' : ''} class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition disabled:opacity-30">Bancada</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'RETIFICA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition shadow-sm border border-slate-100">Retífica</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'METROLOGIA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition shadow-sm border border-slate-100">Metrologia</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'BANCADA')" class="py-3 bg-slate-50 text-slate-700 text-[10px] font-black uppercase rounded-lg hover:bg-slate-100 transition shadow-sm border border-slate-100">Bancada</button>
                                 
                                 ${name.toUpperCase() === 'EIXO' ? `
-                                    <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition disabled:opacity-30 shadow-md">Enviar p/ Balanceamento Solo</button>
+                                    <button onclick="sendPieceTo(this, '${name}', 'BALANCEAMENTO')" class="col-span-2 py-3 bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-black uppercase rounded-lg transition shadow-md">Enviar p/ Balanceamento Solo</button>
                                 ` : ''}
 
-                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" ${!isFinalizado ? 'disabled' : ''} class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2 disabled:opacity-30">Pronto p/ Montagem</button>
+                                <button onclick="sendPieceTo(this, '${name}', 'MONTAGEM')" class="col-span-2 py-4 bg-emerald-600 text-white text-[11px] font-black uppercase rounded-xl transition hover:bg-emerald-700 shadow-lg shadow-emerald-100 mt-2">Pronto p/ Montagem</button>
                             </div>
                         </div>
                     </div>`;
@@ -535,133 +552,187 @@ function renderComponentCards() {
             return items.length > 0 ? items.join('') : '<li class="text-slate-400">Nenhum item.</li>';
         }
 		
-		async function iniciarServicoPeca(componentName) {
+		// INICIA O CRONÔMETRO DE UM SUBPROCESSO ESPECÍFICO (SOLDA)
+        function startServiceTimer(componentName, serviceName) {
             if (!selectedOS) return;
-            const idParaEnviar = selectedOS.service_order_id || selectedOS.os_id || selectedOS.id;
+            const timerKey = `timer_${selectedOS.id}_${componentName}_${serviceName}`;
+            localStorage.setItem(timerKey, new Date().toISOString());
+            renderComponentCards();
+        }
+
+        // PARA O CRONÔMETRO E PERSISTE O TEMPO DECORRIDO NO SUPABASE
+        async function stopServiceTimer(componentName, serviceName) {
+            if (!selectedOS) return;
+            const timerKey = `timer_${selectedOS.id}_${componentName}_${serviceName}`;
+            const startTimeStr = localStorage.getItem(timerKey);
+            
+            if (!startTimeStr) return;
+            localStorage.removeItem(timerKey);
+
+            const startTime = new Date(startTimeStr);
+            const endTime = new Date();
+            const durationSeconds = Math.max(1, Math.floor((endTime - startTime) / 1000));
+
+            let trackingData = [];
+            const trackingList = selectedOS.full_tracking || selectedOS.tracking || [];
+            const trk = trackingList.find(t => (t.component === componentName || t.component_name === componentName));
+
+            if (trk && trk.tracking_data) {
+                trackingData = typeof trk.tracking_data === 'string' ? JSON.parse(trk.tracking_data) : trk.tracking_data;
+            }
+
+            // Remove log antigo desse serviço
+            trackingData = trackingData.filter(log => log.service !== serviceName);
+
+            // Adiciona o novo log
+            trackingData.push({
+                service: serviceName,
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                duration_seconds: durationSeconds
+            });
+
+            const osId = selectedOS.service_order_id || selectedOS.id;
 
             try {
-                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/start-component-service', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ os_id: idParaEnviar, component_name: componentName })
-                });
+                const { error } = await supabaseClient
+                    .from('component_tracking')
+                    .upsert({
+                        service_order_id: osId,
+                        component_name: componentName.toUpperCase().trim(),
+                        tracking_data: trackingData,
+                        current_stage: 'SOLDA',
+                        status: 'Finalizado'
+                    }, { onConflict: 'service_order_id,component_name' });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const startTime = data.rework_start_time || new Date().toISOString();
-
-                    // Inicializa as listas de rastreio caso não existam
-                    if (!selectedOS.tracking) selectedOS.tracking = [];
-                    if (!selectedOS.full_tracking) selectedOS.full_tracking = [];
-
-                    // Atualiza o status em ambas as listas para sincronizar o painel
-                    [selectedOS.tracking, selectedOS.full_tracking].forEach(lista => {
-                        let peca = lista.find(t => (t.component === componentName || t.component_name === componentName));
-                        if (peca) {
-                            peca.status = 'Em Execução';
-                            peca.rework_start_time = startTime;
-                            peca.current_stage = 'SOLDA';
-                        } else {
-                            lista.push({
-                                component: componentName,
-                                component_name: componentName,
-                                status: 'Em Execução',
-                                rework_start_time: startTime,
-                                current_stage: 'SOLDA'
-                            });
-                        }
-                    });
-
+                if (!error) {
+                    if (trk) {
+                        trk.tracking_data = trackingData;
+                        trk.status = 'Finalizado';
+                    } else {
+                        const novaPeca = {
+                            component: componentName,
+                            component_name: componentName,
+                            current_stage: 'SOLDA',
+                            status: 'Finalizado',
+                            tracking_data: trackingData
+                        };
+                        if (selectedOS.tracking) selectedOS.tracking.push(novaPeca);
+                        if (selectedOS.full_tracking) selectedOS.full_tracking.push(novaPeca);
+                    }
+                    
+                    // Preenche e abre o modal de resumo
+                    document.getElementById('resumo-peca-nome').innerText = `${componentName} - ${serviceName}`;
+                    document.getElementById('resumo-inicio').innerText = startTime.toLocaleTimeString('pt-BR');
+                    document.getElementById('resumo-fim').innerText = endTime.toLocaleTimeString('pt-BR');
+                    
+                    const min = Math.floor(durationSeconds / 60);
+                    const sec = durationSeconds % 60;
+                    document.getElementById('resumo-duracao').innerText = `${min}:${sec.toString().padStart(2, '0')} min`;
+                    
+                    document.getElementById('modal-resumo-tempo').classList.remove('hidden');
+                    document.getElementById('modal-resumo-tempo').classList.add('flex');
+                    
                     renderComponentCards();
                 } else {
-                    alert("Erro ao iniciar o serviço no servidor.");
+                    alert("Erro ao salvar tempo no Supabase: " + error.message);
                 }
-            } catch (error) {
-                console.error("Erro na requisição:", error);
-                alert("Erro ao iniciar o serviço.");
+            } catch (e) {
+                console.error(e);
+                alert("Erro de conexão ao salvar tempo.");
             }
         }
 
-        async function finalizarServicoPeca(componentName) {
-            if (!selectedOS) return;
-            const osId = selectedOS.service_order_id || selectedOS.id || selectedOS.os_id;
-            try {
-                const response = await fetch('https://webhook.mareflow.com.br/webhook/production/finish-component-service', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ os_id: osId, component_name: componentName })
-                });
-                const resumo = await response.json();
-                if (response.ok) {
-                    let trk = (selectedOS.full_tracking || selectedOS.tracking || []).find(t => (t.component === componentName || t.component_name === componentName));
-                    if (trk) trk.status = 'Finalizado';
-                    document.getElementById('resumo-peca-nome').innerText = componentName;
-                    document.getElementById('resumo-inicio').innerText = resumo.start_time;
-                    document.getElementById('resumo-fim').innerText = resumo.end_time;
-                    document.getElementById('resumo-duracao').innerText = resumo.duration;
-                    document.getElementById('modal-resumo-tempo').classList.remove('hidden');
-                    document.getElementById('modal-resumo-tempo').classList.add('flex');
-                    renderComponentCards();
+        // FUNÇÃO DE CRONÔMETRO DE LIMPEZA DE SETOR (SOLDA)
+        async function toggleSectorCleaning(sectorName) {
+            const timerKey = `timer_sector_cleaning_start_${sectorName}`;
+            const startTimeStr = localStorage.getItem(timerKey);
+            const btn = document.getElementById('btn-sector-cleaning');
+
+            if (!startTimeStr) {
+                // Iniciar contagem
+                localStorage.setItem(timerKey, new Date().toISOString());
+                btn.classList.replace('bg-turbo-teal', 'bg-red-600');
+                btn.classList.replace('hover:bg-teal-600', 'hover:bg-red-700');
+                btn.classList.add('animate-pulse');
+                btn.innerText = "Parar Limpeza (00:00)";
+            } else {
+                // Parar contagem
+                localStorage.removeItem(timerKey);
+                btn.classList.replace('bg-red-600', 'bg-turbo-teal');
+                btn.classList.replace('hover:bg-red-700', 'hover:bg-teal-600');
+                btn.classList.remove('animate-pulse');
+                btn.innerText = "Iniciar Limpeza Setor";
+
+                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+                const min = Math.floor(elapsed / 60);
+                const sec = elapsed % 60;
+                const formattedTime = `${min}:${sec.toString().padStart(2, '0')} min`;
+
+                if (selectedOS) {
+                    const osId = selectedOS.service_order_id || selectedOS.id;
+                    try {
+                        await supabaseClient
+                            .from('history_events')
+                            .insert({
+                                service_order_id: osId,
+                                action: 'Limpeza do Setor Executada',
+                                details: `O operador realizou a limpeza do setor de ${sectorName} durante ${formattedTime}.`,
+                                timestamp: new Date().toISOString()
+                            });
+                        
+                        // Abre modal de resumo de tempo
+                        document.getElementById('resumo-peca-nome').innerText = `Limpeza Setor: ${sectorName}`;
+                        document.getElementById('resumo-inicio').innerText = new Date(startTimeStr).toLocaleTimeString('pt-BR');
+                        document.getElementById('resumo-fim').innerText = new Date().toLocaleTimeString('pt-BR');
+                        document.getElementById('resumo-duracao').innerText = formattedTime;
+                        
+                        document.getElementById('modal-resumo-tempo').classList.remove('hidden');
+                        document.getElementById('modal-resumo-tempo').classList.add('flex');
+                    } catch (e) { console.error(e); }
+                } else {
+                    alert(`Limpeza concluída: ${formattedTime}. Nenhuma OS selecionada para salvar no histórico.`);
                 }
-            } catch (error) { alert("Erro ao finalizar."); }
+            }
         }
+
+        // Loop de Atualização dos Cronômetros em tempo real (1 segundo)
+        setInterval(() => {
+            // 1. Atualização dos cronômetros das peças
+            if (selectedOS) {
+                document.querySelectorAll('[id^="badge-"]').forEach(badge => {
+                    const idParts = badge.id.split('-');
+                    const compTitle = idParts[1];
+                    const cleanItemName = idParts[2];
+                    
+                    const prefix = `timer_${selectedOS.id}_${compTitle}_`;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith(prefix)) {
+                            const startTimeStr = localStorage.getItem(key);
+                            if (startTimeStr) {
+                                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+                                const min = Math.floor(elapsed / 60);
+                                const sec = elapsed % 60;
+                                badge.innerText = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 2. Atualização em tempo real do cronômetro de Limpeza do Setor
+            const cleaningKey = `timer_sector_cleaning_start_SOLDA`;
+            const cleaningStart = localStorage.getItem(cleaningKey);
+            if (cleaningStart) {
+                const elapsed = Math.floor((new Date() - new Date(cleaningStart)) / 1000);
+                const min = Math.floor(elapsed / 60);
+                const sec = elapsed % 60;
+                const btn = document.getElementById('btn-sector-cleaning');
+                if (btn) btn.innerText = `Parar Limpeza (${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')})`;
+            }
+        }, 1000);
     </script>
 	
-	<!-- MODAL DE HISTÓRICO COMPLETO -->
-    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[150]">
-        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
-            <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
-                <h3 class="text-xl font-black text-turbo-blue uppercase tracking-tighter">Histórico da OS</h3>
-                <button onclick="document.getElementById('details-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
-                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800">--</p></div>
-                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
-            </div>
-
-            <div class="space-y-4 mb-6">
-                <div>
-                    <p class="text-slate-500 font-medium uppercase text-[10px] mb-1">Itens Adicionais (Checklist Entrada)</p>
-                    <ul id="detail-maintenance-extras" class="text-xs list-disc list-inside bg-slate-50 p-3 rounded-lg text-slate-800"></ul>
-                </div>
-            </div>
-
-            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
-            <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
-                <!-- Histórico injetado aqui -->
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL RESUMO DE EXECUÇÃO (SOLDA) -->
-    <div id="modal-resumo-tempo" class="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden border-t-8 border-orange-500">
-            <div class="p-8 text-center">
-                <div class="w-20 h-20 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-stopwatch text-3xl"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-800 uppercase tracking-tighter mb-2">Soldagem Finalizada!</h3>
-                <p id="resumo-peca-nome" class="text-orange-600 font-bold uppercase text-sm mb-2">NOME DA PEÇA</p>
-                <p class="text-[11px] text-slate-500 font-medium italic mb-6">Agora você pode direcionar a peça para o próximo setor desejado.</p>
-                <div class="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-2xl">
-                    <div class="text-left">
-                        <p class="text-[10px] font-black text-slate-400 uppercase">Início</p>
-                        <p id="resumo-inicio" class="font-bold text-slate-700">--:--</p>
-                    </div>
-                    <div class="text-left border-l pl-4">
-                        <p class="text-[10px] font-black text-slate-400 uppercase">Fim</p>
-                        <p id="resumo-fim" class="font-bold text-slate-700">--:--</p>
-                    </div>
-                    <div class="col-span-2 border-t pt-2 mt-2">
-                        <p class="text-[10px] font-black text-slate-400 uppercase">Tempo Total</p>
-                        <p id="resumo-duracao" class="text-2xl font-black text-orange-600">--</p>
-                    </div>
-                </div>
-                <button onclick="document.getElementById('modal-resumo-tempo').classList.add('hidden')" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-black transition shadow-lg">OK, Continuar</button>
-            </div>
-        </div>
-    </div>
-	
-</body>
+	</body>
 </html>
