@@ -48,15 +48,14 @@
         </div>
 
         <div class="flex items-center space-x-6">
-            <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
+            <button onclick="window.location.href='https://mareflow.github.io/quadrodeproducao/'" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
                 Quadro de Produção
             </button>
             <div class="flex items-center space-x-3 border-l pl-6 border-slate-200">
-                <div class="text-right">
-                    <p class="text-sm font-bold leading-none">Administrador</p>
-                    <p class="text-[10px] text-turbo-teal font-bold uppercase tracking-wider">Setor Solda</p>
+                <div class="text-right pr-4">
+                    <p class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Setor Solda</p>
                 </div>
-                <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Sair</button>
+                <button onclick="window.location.href='https://mareflow.github.io/turbosul-login/'" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Sair</button>
             </div>
         </div>
     </header>
@@ -202,7 +201,7 @@
         const API_ACTION = 'https://webhook.mareflow.com.br/webhook/production/component-routing';
         
         let selectedOS = null;
-        let queueData = [];
+        let queueData = []; // Declarado globalmente para suportar o filtro preventivo
         let specialItemsList = [];
 
         // Estrutura de Checklists Específicos para Solda
@@ -226,18 +225,54 @@
                 const response = await fetch(API_QUEUE);
                 const result = await response.json();
                 
-                // Trata o retorno conforme estrutura informada
+                let rawQueue = [];
                 if (Array.isArray(result)) {
-                    queueData = result;
+                    rawQueue = result;
                 } else if (result && result.os_id) {
-                    queueData = [result];
+                    rawQueue = [result];
                 } else {
-                    queueData = result.data || [];
+                    rawQueue = result.data || [];
                 }
 
+                // Filtro Inteligente: Remove OSs onde todas as peças já foram enviadas para fora da Solda
+                if (rawQueue.length > 0) {
+                    const osIds = rawQueue.map(os => os.service_order_id || os.os_id || os.id);
+                    
+                    const { data: trackings, error } = await supabaseClient
+                        .from('component_tracking')
+                        .select('*')
+                        .in('service_order_id', osIds);
+                        
+                    if (!error && trackings) {
+                        rawQueue = rawQueue.filter(os => {
+                            const osId = os.service_order_id || os.os_id || os.id;
+                            const osTracking = trackings.filter(t => t.service_order_id === osId);
+                            
+                            const componentsToRender = [...new Set(os.components_to_render || [])];
+                            if (componentsToRender.length === 0) return true;
+
+                            // Se ainda houver alguma peça cujo setor atual NÃO seja pós-solda, mantém na fila
+                            const hasPendingPiece = componentsToRender.some(compName => {
+                                const p = osTracking.find(t => (t.component_name || t.component || '').toUpperCase() === compName.toUpperCase());
+                                const stage = p ? (p.target_sector || p.current_stage || p.stage || '').toUpperCase().trim() : '';
+                                
+                                // Setores que indicam que a peça já passou da Solda
+                                const postSectors = ['RETIFICA', 'METROLOGIA', 'BANCADA', 'MONTAGEM', 'BALANCEAMENTO', 'BALANCEAMENTO FINAL', 'QUALIDADE', 'EXPEDICAO', 'EXPEDIÇÃO'];
+                                return !postSectors.includes(stage);
+                            });
+
+                            // Pré-carrega o tracking para o clique ficar instantâneo
+                            os.full_tracking = osTracking;
+
+                            return hasPendingPiece;
+                        });
+                    }
+                }
+
+                queueData = rawQueue;
                 renderQueue();
             } catch (error) {
-                console.error("Erro ao carregar fila:", error);
+                console.error("Erro ao carregar fila da Solda:", error);
                 document.getElementById('os-queue-container').innerHTML = '<p class="p-4 text-red-500 text-xs">Erro ao conectar com servidor.</p>';
             }
         }
@@ -248,7 +283,6 @@
 
             queueData.forEach(os => {
                 const card = document.createElement('div');
-                // PRIORIZA O service_order_id QUE VEM DA VIEW
                 const osId = os.service_order_id || os.os_id || os.id;
                 card.className = `p-4 cursor-pointer hover:bg-slate-50 transition border-l-4 border-transparent ${selectedOS?.service_order_id === osId ? 'os-card-selected' : ''}`;
                 card.onclick = () => selectOS(osId);
@@ -278,6 +312,7 @@
             document.getElementById('current-os-id').innerText = selectedOS.business_id;
             document.getElementById('current-os-desc').innerText = `${selectedOS.model} | ${selectedOS.client}`;
 
+            // Os dados de tracking já vêm pré-carregados da fila inicial
             renderComponentCards();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -551,6 +586,14 @@ function renderComponentCards() {
             const items = Object.entries(extras).filter(([_, val]) => val === true).map(([key, _]) => `<li class="font-bold text-slate-700">${mapping[key] || key}</li>`);
             return items.length > 0 ? items.join('') : '<li class="text-slate-400">Nenhum item.</li>';
         }
+
+        function closeModal(id) { 
+            const el = document.getElementById(id);
+            if(el) {
+                el.classList.add('hidden'); 
+                el.classList.remove('flex'); 
+            }
+        }
 		
 		// INICIA O CRONÔMETRO DE UM SUBPROCESSO ESPECÍFICO (SOLDA)
         function startServiceTimer(componentName, serviceName) {
@@ -760,6 +803,32 @@ function renderComponentCards() {
                 </div>
                 <button onclick="document.getElementById('modal-resumo-tempo').classList.add('hidden')" class="w-full bg-slate-800 text-white font-black py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-black transition shadow-lg">OK, Continuar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE HISTÓRICO COMPLETO (TIMELINE) -->
+    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[150]">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-black text-blue-600 uppercase tracking-tighter">Histórico da OS</h3>
+                <button onclick="closeModal('details-modal')" class="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800">--</p></div>
+                <div><p class="text-slate-500 font-medium uppercase text-[10px]">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <p class="text-slate-500 font-medium uppercase text-[10px] mb-1">Itens Adicionais (Checklist Entrada)</p>
+                    <ul id="detail-maintenance-extras" class="text-xs list-disc list-inside bg-slate-50 p-3 rounded-lg text-slate-800"></ul>
+                </div>
+            </div>
+
+            <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
+            <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
+                </div>
         </div>
     </div>
 </body>
