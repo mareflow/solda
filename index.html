@@ -427,8 +427,7 @@ function renderComponentCards() {
                 
                 const card = document.getElementById(`comp-card-${componentName.replace(/\s+/g, '-')}`);
                 const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
-                // CORREÇÃO: Alinhado para ler 'cb.dataset.service' (atributo correto do checkbox)
-                const services = Array.from(checkboxes).map(cb => cb.dataset.service);
+                const services = Array.from(checkboxes).map(cb => cb.dataset.item);
 
                 btn.disabled = true;
                 const originalText = btn.innerText;
@@ -569,10 +568,11 @@ function renderComponentCards() {
                     timeline.innerHTML = events.map(ev => `
                         <div class="relative pb-4 border-l-2 border-turbo-blue pl-4 ml-2">
                             <div class="absolute -left-[9px] top-1 w-4 h-4 bg-turbo-blue rounded-full border-2 border-white shadow-sm"></div>
-                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-none">${ev.action}</p>
                             <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[9px] text-turbo-blue italic mt-1 font-semibold leading-relaxed">"${ev.details}"</p>` : ''}
                         </div>`).join('');
-                } else { 
+                } else {
                     timeline.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center uppercase py-4">Iniciando rastreio...</p>'; 
                 }
             } catch (err) { timeline.innerHTML = '<p class="text-xs text-red-500 text-center">Falha na conexão.</p>'; }
