@@ -427,7 +427,8 @@ function renderComponentCards() {
                 
                 const card = document.getElementById(`comp-card-${componentName.replace(/\s+/g, '-')}`);
                 const checkboxes = card.querySelectorAll('input[type="checkbox"]:checked');
-                const services = Array.from(checkboxes).map(cb => cb.dataset.item);
+                // CORREÇÃO: Alinhado para ler 'cb.dataset.service' (atributo correto) para capturar os serviços e tempos no histórico
+                const services = Array.from(checkboxes).map(cb => cb.dataset.service);
 
                 btn.disabled = true;
                 const originalText = btn.innerText;
